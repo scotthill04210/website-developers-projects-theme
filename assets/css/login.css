@@ -1,0 +1,195 @@
+/**
+ * Branded WordPress login.
+ * Logo is the Dark Jungle Local Image mark on the Pure Canvas background.
+ */
+
+@font-face {
+	font-family: Inter;
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("../fonts/inter/Inter-Regular.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Inter;
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url("../fonts/inter/Inter-Medium.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Inter;
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("../fonts/inter/Inter-SemiBold.woff2") format("woff2");
+}
+
+body.login {
+	background:
+		radial-gradient(1200px 600px at 10% -10%, rgba(191, 209, 0, 0.18), transparent 55%),
+		radial-gradient(900px 500px at 100% 0%, rgba(30, 30, 33, 0.08), transparent 50%),
+		#f7f6f5;
+	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+	color: #1e1e21;
+}
+
+body.login #login h1 a {
+	width: 220px;
+	height: 56px;
+	margin: 0 auto 1.25rem;
+	background-image: var(--lidev-login-logo);
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	text-indent: -9999px;
+	overflow: hidden;
+}
+
+body.login #login {
+	width: min(24rem, 92vw);
+	padding: 2.5rem 0 1rem;
+}
+
+body.login form {
+	border: 1px solid #d8d8d8;
+	border-radius: 0.85rem;
+	background: #fff;
+	box-shadow: 0 16px 40px rgba(30, 30, 33, 0.08);
+	padding: 1.5rem 1.35rem 1.25rem;
+}
+
+body.login form .input,
+body.login input[type="text"],
+body.login input[type="password"],
+body.login input[type="email"] {
+	border: 1px solid #d8d8d8;
+	border-radius: 0.4rem;
+	background: #f7f6f5;
+	color: #1e1e21;
+	font-size: 0.95rem;
+	padding: 0.55rem 0.7rem;
+	box-shadow: none;
+}
+
+body.login form .input:focus,
+body.login input[type="text"]:focus,
+body.login input[type="password"]:focus {
+	border-color: #1e1e21;
+	box-shadow: 0 0 0 1px #1e1e21;
+}
+
+body.login label {
+	color: #545454;
+	font-size: 0.8rem;
+	font-weight: 600;
+}
+
+body.login .forgetmenot label {
+	font-weight: 500;
+}
+
+body.login .button-primary,
+body.login .wp-core-ui .button-primary {
+	width: 100%;
+	float: none;
+	margin-top: 0.75rem;
+	border: 0;
+	border-radius: 0.45rem;
+	background: #bfd100 !important;
+	color: #1e1e21 !important;
+	text-shadow: none !important;
+	box-shadow: none !important;
+	font-weight: 600;
+	padding: 0.55rem 1rem !important;
+	height: auto !important;
+	line-height: 1.4 !important;
+}
+
+body.login .button-primary:hover,
+body.login .wp-core-ui .button-primary:hover {
+	background: #1e1e21 !important;
+	color: #f7f6f5 !important;
+}
+
+body.login .button-primary:focus {
+	box-shadow: 0 0 0 2px #bfd100 !important;
+}
+
+body.login #nav,
+body.login #backtoblog {
+	text-align: center;
+	padding: 0 0.5rem;
+}
+
+body.login #nav a,
+body.login #backtoblog a,
+body.login .privacy-policy-page-link a {
+	color: #545454;
+	font-size: 0.8125rem;
+	text-decoration: none;
+}
+
+body.login #nav a:hover,
+body.login #backtoblog a:hover,
+body.login .privacy-policy-page-link a:hover {
+	color: #1e1e21;
+	text-decoration: underline;
+}
+
+body.login .message,
+body.login #login_error,
+body.login .success {
+	border-radius: 0.5rem;
+	border-left-width: 4px;
+	box-shadow: none;
+}
+
+body.login #login_error {
+	border-left-color: #b91c1c;
+}
+
+body.login .message {
+	border-left-color: #bfd100;
+}
+
+body.login .lidev-login-tagline {
+	margin: 0 0 1rem;
+	padding: 0 0.25rem;
+	color: #545454;
+	font-size: 0.9rem;
+	text-align: center;
+	line-height: 1.45;
+}
+
+body.login .lidev-login-footer {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 1rem;
+	margin: 0;
+	color: #545454;
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-align: center;
+	text-transform: uppercase;
+	opacity: 0.7;
+	pointer-events: none;
+}
+
+body.login .language-switcher {
+	margin-top: 1.25rem;
+}
+
+body.login .language-switcher select {
+	border-radius: 0.35rem;
+	border-color: #d8d8d8;
+}
+
+body.login .privacy-policy-page-link {
+	margin: 1.5rem 0 0;
+	text-align: center;
+}

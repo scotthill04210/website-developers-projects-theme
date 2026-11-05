@@ -1,0 +1,64 @@
+/**
+ * Editor canvas. Inter and the Local Image palette.
+ */
+
+@font-face {
+	font-family: Inter;
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("../fonts/inter/Inter-Regular.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Inter;
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url("../fonts/inter/Inter-Medium.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Inter;
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("../fonts/inter/Inter-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Inter;
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url("../fonts/inter/Inter-Bold.woff2") format("woff2");
+}
+
+body {
+	background: #f7f6f5;
+	color: #1e1e21;
+	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+	font-size: 1.0625rem;
+	line-height: 1.65;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	color: #1e1e21;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+a {
+	color: #1e1e21;
+}
+
+blockquote {
+	border-left: 3px solid #bfd100;
+	padding-left: 1rem;
+	color: #1e1e21;
+}
