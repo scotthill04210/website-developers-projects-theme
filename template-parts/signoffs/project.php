@@ -264,6 +264,10 @@ foreach ( $lidev_phases as $lidev_phase_row ) {
 								)
 							) . ' ' . lidev_format_mysql_date( (string) ( $lidev_failure['created_at'] ?? '' ), true )
 						);
+						$lidev_error = trim( (string) ( $lidev_details['error'] ?? '' ) );
+						if ( '' !== $lidev_error ) {
+							echo ' — ' . esc_html( $lidev_error );
+						}
 						?>
 					</li>
 				<?php endforeach; ?>

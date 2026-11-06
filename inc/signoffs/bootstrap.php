@@ -23,6 +23,7 @@ require_once LIDEV_PATH . 'inc/signoffs/class-lidev-install.php';
 require_once LIDEV_PATH . 'inc/signoffs/class-lidev-roles.php';
 require_once LIDEV_PATH . 'inc/signoffs/class-lidev-project.php';
 require_once LIDEV_PATH . 'inc/signoffs/class-lidev-settings.php';
+require_once LIDEV_PATH . 'inc/signoffs/class-lidev-graph-mailer.php';
 require_once LIDEV_PATH . 'inc/signoffs/clients.php';
 require_once LIDEV_PATH . 'inc/signoffs/mail.php';
 require_once LIDEV_PATH . 'inc/signoffs/class-lidev-routing.php';

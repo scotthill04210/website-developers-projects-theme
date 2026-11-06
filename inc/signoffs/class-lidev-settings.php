@@ -37,6 +37,10 @@ final class Lidev_Settings {
 		}
 
 		$from_email = sanitize_email( (string) ( $saved['from_email'] ?? '' ) );
+
+		if ( class_exists( 'Lidev_Graph_Mailer' ) && Lidev_Graph_Mailer::is_configured() ) {
+			$from_email = Lidev_Graph_Mailer::sender();
+		}
 		$messages   = self::default_messages();
 
 		foreach ( $messages as $key => $fallback ) {
@@ -88,6 +92,10 @@ final class Lidev_Settings {
 
 			if ( '' !== $from_email && ! is_email( $from_email ) ) {
 				$from_email = $current['from_email'];
+			}
+
+			if ( class_exists( 'Lidev_Graph_Mailer' ) && Lidev_Graph_Mailer::is_configured() ) {
+				$from_email = Lidev_Graph_Mailer::sender();
 			}
 
 			$next['team_email'] = $team_email;

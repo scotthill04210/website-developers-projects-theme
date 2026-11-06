@@ -47,6 +47,7 @@ $lidev_leads = array(
 </nav>
 
 <?php if ( 'email' === $lidev_tab ) : ?>
+	<p class="lidev-meta"><?php echo esc_html( Lidev_Graph_Mailer::status_label() ); ?></p>
 	<form class="lidev-signoffs__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="lidev_save_settings">
 		<input type="hidden" name="lidev_settings_tab" value="email">
@@ -64,8 +65,11 @@ $lidev_leads = array(
 
 		<label class="lidev-signoffs__field" for="lidev-from-email">
 			<span><?php esc_html_e( 'From address', 'li-dev-theme' ); ?></span>
-			<input id="lidev-from-email" name="from_email" type="email" value="<?php echo esc_attr( $lidev_settings['from_email'] ); ?>">
+			<input id="lidev-from-email" name="from_email" type="email" value="<?php echo esc_attr( $lidev_settings['from_email'] ); ?>" <?php echo Lidev_Graph_Mailer::is_configured() ? 'readonly' : ''; ?>>
 		</label>
+		<?php if ( Lidev_Graph_Mailer::is_configured() ) : ?>
+			<p class="lidev-meta"><?php esc_html_e( 'This address is the Microsoft 365 shared mailbox and cannot be changed here.', 'li-dev-theme' ); ?></p>
+		<?php endif; ?>
 
 		<button class="lidev-button" type="submit"><?php esc_html_e( 'Save email', 'li-dev-theme' ); ?></button>
 	</form>
