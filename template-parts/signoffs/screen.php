@@ -22,6 +22,12 @@ get_header();
 			<?php
 			if ( 'settings' === $lidev_screen ) {
 				require LIDEV_PATH . 'template-parts/signoffs/settings.php';
+			} elseif ( 'docs' === $lidev_screen ) {
+				require LIDEV_PATH . 'template-parts/signoffs/docs.php';
+			} elseif ( 'activity' === $lidev_screen ) {
+				require LIDEV_PATH . 'template-parts/signoffs/activity.php';
+			} elseif ( 'archive' === $lidev_screen ) {
+				require LIDEV_PATH . 'template-parts/signoffs/archive.php';
 			} elseif ( 'new' === $lidev_screen || 'edit' === $lidev_screen ) {
 				require LIDEV_PATH . 'template-parts/signoffs/project-form.php';
 			} else {

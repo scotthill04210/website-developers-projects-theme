@@ -97,6 +97,11 @@ function lidev_has_primary_nav(): bool {
 		return $has;
 	}
 
+	if ( is_user_logged_in() && ( current_user_can( 'lidev_view_all_projects' ) || ( function_exists( 'lidev_user_is_client_only' ) && lidev_user_is_client_only() ) ) ) {
+		$has = true;
+		return true;
+	}
+
 	if ( has_nav_menu( 'primary' ) ) {
 		$has = true;
 		return true;
@@ -129,16 +134,99 @@ function lidev_fallback_menu( array $args ): void {
 		)
 	);
 
-	if ( ! $pages ) {
+	$dashboard = lidev_dashboard_menu_markup();
+	$docs      = lidev_docs_menu_markup();
+
+	if ( ! $pages && '' === $dashboard && '' === $docs ) {
 		return;
 	}
 
 	printf(
-		'<ul class="%1$s">%2$s</ul>',
+		'<ul class="%1$s">%2$s%3$s%4$s</ul>',
 		esc_attr( (string) $args['menu_class'] ),
+		$dashboard, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- lidev_dashboard_menu_markup() escapes its output.
+		$docs, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- lidev_docs_menu_markup() escapes its output.
 		$pages // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_list_pages() escapes item markup.
 	);
 }
+
+/**
+ * Dashboard link for Team, with a grid icon.
+ *
+ * @since 1.2.0
+ * @return string
+ */
+function lidev_dashboard_menu_markup(): string {
+	$sees_dashboard = is_user_logged_in() && ( current_user_can( 'lidev_view_all_projects' ) || ( function_exists( 'lidev_user_is_client_only' ) && lidev_user_is_client_only() ) );
+
+	if ( ! $sees_dashboard ) {
+		return '';
+	}
+
+	$classes = 'menu-item lidev-nav-dashboard';
+
+	if ( is_front_page() ) {
+		$classes .= ' current-menu-item';
+	}
+
+	$icon = '<svg class="lidev-nav-dashboard__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+
+	return sprintf(
+		'<li class="%1$s"><a href="%2$s">%3$s<span>%4$s</span></a></li>',
+		esc_attr( $classes ),
+		esc_url( home_url( '/' ) ),
+		$icon,
+		esc_html__( 'Dashboard', 'li-dev-theme' )
+	);
+}
+
+/**
+ * Put Dashboard first in an assigned Primary menu.
+ *
+ * @since 1.2.0
+ * @param string $items Menu HTML.
+ * @param object $args  Menu arguments.
+ * @return string
+ */
+function lidev_prepend_dashboard_menu_item( string $items, $args ): string {
+	if ( ! is_object( $args ) || ! isset( $args->theme_location ) || 'primary' !== $args->theme_location ) {
+		return $items;
+	}
+
+	return lidev_dashboard_menu_markup() . lidev_docs_menu_markup() . $items;
+}
+
+/**
+ * Documentation link, with a document icon.
+ *
+ * Clients and everyone else use the same address. The page chooses the guide.
+ *
+ * @since 1.7.0
+ * @return string
+ */
+function lidev_docs_menu_markup(): string {
+	if ( ! function_exists( 'lidev_has_primary_nav' ) || ! lidev_has_primary_nav() ) {
+		return '';
+	}
+
+	$classes = 'menu-item lidev-nav-docs';
+
+	if ( class_exists( 'Lidev_Routing' ) && 'docs' === Lidev_Routing::screen() ) {
+		$classes .= ' current-menu-item';
+	}
+
+	$icon = '<svg class="lidev-nav-docs__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7.2L19 8.2V19.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M14 3.5V8.2H19"/><path d="M9 12.5h6M9 16h6"/></svg>';
+	$url  = class_exists( 'Lidev_Routing' ) ? Lidev_Routing::docs_url() : home_url( '/documentation/' );
+
+	return sprintf(
+		'<li class="%1$s"><a href="%2$s">%3$s<span>%4$s</span></a></li>',
+		esc_attr( $classes ),
+		esc_url( $url ),
+		$icon,
+		esc_html__( 'Documentation', 'li-dev-theme' )
+	);
+}
+add_filter( 'wp_nav_menu_items', 'lidev_prepend_dashboard_menu_item', 10, 2 );
 
 /**
  * Front-end styles and the mobile menu script.
@@ -369,3 +457,4 @@ function lidev_login_footer_note(): void {
 add_action( 'login_footer', 'lidev_login_footer_note' );
 
 require_once LIDEV_PATH . 'inc/signoffs/bootstrap.php';
+require_once LIDEV_PATH . 'inc/class-lidev-github-updater.php';

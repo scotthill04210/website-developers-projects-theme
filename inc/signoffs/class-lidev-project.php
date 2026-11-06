@@ -50,9 +50,12 @@ final class Lidev_Project {
 				'capability_type'     => array( 'lidev_project', 'lidev_projects' ),
 				'map_meta_cap'        => true,
 				'capabilities'        => array(
-					'edit_post'              => 'lidev_manage_projects',
-					'read_post'              => 'lidev_view_all_projects',
-					'delete_post'            => 'lidev_manage_projects',
+					// Singular caps must stay distinct. Mapping them onto the role
+					// caps makes current_user_can( 'lidev_view_all_projects' ) deny
+					// everyone, because WordPress treats that name as a post check.
+					'edit_post'              => 'edit_lidev_project',
+					'read_post'              => 'read_lidev_project',
+					'delete_post'            => 'delete_lidev_project',
 					'edit_posts'             => 'lidev_manage_projects',
 					'edit_others_posts'      => 'lidev_manage_projects',
 					'delete_posts'           => 'lidev_manage_projects',
@@ -77,6 +80,22 @@ final class Lidev_Project {
 				'single'            => true,
 				'show_in_rest'      => false,
 				'sanitize_callback' => 'sanitize_text_field',
+				'auth_callback'     => static function (): bool {
+					return current_user_can( 'lidev_manage_projects' );
+				},
+			)
+		);
+
+		register_post_meta(
+			'lidev_project',
+			'_lidev_archived',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'show_in_rest'      => false,
+				'sanitize_callback' => static function ( $value ): string {
+					return '1' === (string) $value ? '1' : '';
+				},
 				'auth_callback'     => static function (): bool {
 					return current_user_can( 'lidev_manage_projects' );
 				},
@@ -204,6 +223,52 @@ final class Lidev_Project {
 	}
 
 	/**
+	 * Whether the project is filed in the archive.
+	 *
+	 * @since 1.8.0
+	 * @param int $project_id Project ID.
+	 * @return bool
+	 */
+	public static function is_archived( int $project_id ): bool {
+		return '1' === (string) get_post_meta( $project_id, '_lidev_archived', true );
+	}
+
+	/**
+	 * File a project in the archive, or bring it back to the dashboard.
+	 *
+	 * @since 1.8.0
+	 * @param int  $project_id Project ID.
+	 * @param bool $archived   True to archive.
+	 * @return true|WP_Error
+	 */
+	public static function set_archived( int $project_id, bool $archived ) {
+		if ( 'lidev_project' !== get_post_type( $project_id ) ) {
+			return new WP_Error( 'lidev_project_missing', __( 'That project does not exist.', 'li-dev-theme' ) );
+		}
+
+		if ( self::is_archived( $project_id ) === $archived ) {
+			return true;
+		}
+
+		if ( $archived ) {
+			update_post_meta( $project_id, '_lidev_archived', '1' );
+		} else {
+			delete_post_meta( $project_id, '_lidev_archived' );
+		}
+
+		lidev_log(
+			$archived ? 'project_archived' : 'project_restored',
+			$project_id,
+			null,
+			array(
+				'title' => get_the_title( $project_id ),
+			)
+		);
+
+		return true;
+	}
+
+	/**
 	 * Stop Trash and Delete once any phase is signed.
 	 *
 	 * @since 1.1.0
@@ -258,4 +323,15 @@ function lidev_create_project( array $args ) {
  */
 function lidev_update_project( int $project_id, array $args ) {
 	return Lidev_Project::update( $project_id, $args );
+}
+
+/**
+ * Whether a project is in the archive.
+ *
+ * @since 1.8.0
+ * @param int $project_id Project ID.
+ * @return bool
+ */
+function lidev_project_is_archived( int $project_id ): bool {
+	return Lidev_Project::is_archived( $project_id );
 }

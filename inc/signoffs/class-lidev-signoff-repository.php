@@ -38,8 +38,9 @@ final class Lidev_Signoff_Repository {
 		$type       = sanitize_key( (string) ( $row['signature_type'] ?? '' ) );
 		$name       = sanitize_text_field( (string) ( $row['signer_name'] ?? '' ) );
 		$signature  = self::sanitize_signature( $type, (string) ( $row['signature_data'] ?? '' ) );
+		$snapshot   = self::sanitize_snapshot( (string) ( $row['snapshot'] ?? '' ) );
 
-		if ( $project_id < 1 || $phase_id < 1 || $user_id < 1 || '' === $name || '' === $signature ) {
+		if ( $project_id < 1 || $phase_id < 1 || $user_id < 1 || '' === $name || '' === $signature || '' === $snapshot ) {
 			return new WP_Error( 'lidev_signoff_invalid', __( 'The sign-off record is incomplete.', 'li-dev-theme' ) );
 		}
 
@@ -60,9 +61,10 @@ final class Lidev_Signoff_Repository {
 				'prev_hash'      => self::sanitize_hash( (string) ( $row['prev_hash'] ?? '' ) ),
 				'ip_address'     => substr( sanitize_text_field( (string) ( $row['ip_address'] ?? '' ) ), 0, 45 ),
 				'user_agent'     => substr( sanitize_text_field( (string) ( $row['user_agent'] ?? '' ) ), 0, 255 ),
-				'signed_at'      => current_time( 'mysql' ),
+				'signed_at'      => self::signed_at( (string) ( $row['signed_at'] ?? '' ) ),
+				'snapshot'       => $snapshot,
 			),
-			array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		if ( false === $inserted ) {
@@ -136,6 +138,35 @@ final class Lidev_Signoff_Repository {
 	}
 
 	/**
+	 * Every sign-off, oldest first. Used to check the hash chain.
+	 *
+	 * @since 1.4.0
+	 * @return list<array<string, mixed>>
+	 */
+	public static function all(): array {
+		global $wpdb;
+
+		$rows = $wpdb->get_results(
+			'SELECT * FROM ' . lidev_table( 'signoffs' ) . ' ORDER BY id ASC',
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Signature value that is safe to store. Empty when it is not allowed.
+	 *
+	 * @since 1.4.0
+	 * @param string $type signature_type.
+	 * @param string $data Raw signature payload.
+	 * @return string
+	 */
+	public static function accept_signature( string $type, string $data ): string {
+		return self::sanitize_signature( $type, $data );
+	}
+
+	/**
 	 * Typed names are plain text. Drawn signatures must be a PNG data URL.
 	 *
 	 * @since 1.1.0
@@ -164,7 +195,117 @@ final class Lidev_Signoff_Repository {
 			return '';
 		}
 
+		$binary = base64_decode( $payload, true );
+
+		if ( ! is_string( $binary ) || ! self::png_has_ink( $binary ) ) {
+			return '';
+		}
+
 		return $prefix . $payload;
+	}
+
+	/**
+	 * The frozen JSON copied at signing time. Empty when the shape is wrong.
+	 *
+	 * @since 1.4.0
+	 * @param string $json Raw snapshot.
+	 * @return string
+	 */
+	private static function sanitize_snapshot( string $json ): string {
+		$decoded = json_decode( $json, true );
+
+		if ( ! is_array( $decoded ) ) {
+			return '';
+		}
+
+		foreach ( Lidev_Signoff::SNAPSHOT_KEYS as $key ) {
+			if ( ! array_key_exists( $key, $decoded ) || ! is_string( $decoded[ $key ] ) ) {
+				return '';
+			}
+		}
+
+		return $json;
+	}
+
+	/**
+	 * Use the caller's timestamp when it is a MySQL datetime, so the hash matches the row.
+	 *
+	 * @since 1.4.0
+	 * @param string $value Proposed signed_at.
+	 * @return string
+	 */
+	private static function signed_at( string $value ): string {
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value ) ) {
+			return $value;
+		}
+
+		return current_time( 'mysql' );
+	}
+
+	/**
+	 * A drawn signature must be a PNG with visible ink, not an empty canvas.
+	 *
+	 * @since 1.4.0
+	 * @param string $binary Decoded PNG bytes.
+	 * @return bool
+	 */
+	private static function png_has_ink( string $binary ): bool {
+		if ( strlen( $binary ) < 32 || strlen( $binary ) > 400000 || ! str_starts_with( $binary, "\x89PNG\r\n\x1a\n" ) ) {
+			return false;
+		}
+
+		if ( ! function_exists( 'imagecreatefromstring' ) ) {
+			return false;
+		}
+
+		$image = imagecreatefromstring( $binary );
+
+		if ( false === $image ) {
+			return false;
+		}
+
+		$width  = imagesx( $image );
+		$height = imagesy( $image );
+
+		if ( $width < 1 || $height < 1 || $width > 2000 || $height > 1000 ) {
+			imagedestroy( $image );
+			return false;
+		}
+
+		$ink  = 0;
+		$step = max( 1, (int) floor( max( $width, $height ) / 400 ) );
+
+		for ( $y = 0; $y < $height; $y += $step ) {
+			for ( $x = 0; $x < $width; $x += $step ) {
+				$color = imagecolorat( $image, $x, $y );
+
+				if ( imageistruecolor( $image ) ) {
+					$alpha = ( $color >> 24 ) & 0x7F;
+					$red   = ( $color >> 16 ) & 0xFF;
+					$green = ( $color >> 8 ) & 0xFF;
+					$blue  = $color & 0xFF;
+				} else {
+					$rgba  = imagecolorsforindex( $image, $color );
+					$alpha = (int) ( $rgba['alpha'] ?? 127 );
+					$red   = (int) ( $rgba['red'] ?? 255 );
+					$green = (int) ( $rgba['green'] ?? 255 );
+					$blue  = (int) ( $rgba['blue'] ?? 255 );
+				}
+
+				if ( $alpha < 80 && ( $red < 245 || $green < 245 || $blue < 245 ) ) {
+					++$ink;
+				}
+
+				if ( $ink >= 4 ) {
+					imagedestroy( $image );
+					return true;
+				}
+			}
+		}
+
+		imagedestroy( $image );
+
+		return false;
 	}
 
 	/**

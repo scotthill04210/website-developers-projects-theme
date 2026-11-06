@@ -232,7 +232,7 @@ final class Lidev_Team_Actions {
 			self::fail( Lidev_Routing::project_url( $project_id ), __( 'Enter a full link starting with http:// or https://.', 'li-dev-theme' ) );
 		}
 
-		$message = isset( $_POST['lidev_message'] ) ? wp_kses_post( wp_unslash( (string) $_POST['lidev_message'] ) ) : '';
+		$message = isset( $_POST['lidev_message'] ) ? lidev_sanitize_email_html( wp_unslash( (string) $_POST['lidev_message'] ) ) : '';
 		$was     = (string) $phase['status'];
 		$result  = Lidev_Phase_Repository::send( $phase_id, $link, $message, get_current_user_id() );
 
@@ -255,6 +255,44 @@ final class Lidev_Team_Actions {
 	}
 
 	/**
+	 * Return the phase email HTML for the Team preview. Does not send mail or create a link.
+	 *
+	 * @since 1.7.0
+	 * @return void
+	 */
+	public static function preview_phase_email(): void {
+		if ( ! current_user_can( 'lidev_send_phases' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You cannot do that.', 'li-dev-theme' ) ), 403 );
+		}
+
+		check_ajax_referer( 'lidev_preview_phase_email', 'lidev_nonce' );
+
+		$project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+		$phase_id   = isset( $_POST['phase_id'] ) ? absint( $_POST['phase_id'] ) : 0;
+
+		if ( 'lidev_project' !== get_post_type( $project_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'That project does not exist.', 'li-dev-theme' ) ), 404 );
+		}
+
+		$phase = Lidev_Phase_Repository::get( $phase_id );
+
+		if ( ! $phase || (int) $phase['project_id'] !== $project_id || 'signed' === (string) $phase['status'] ) {
+			wp_send_json_error( array( 'message' => __( 'That phase does not belong to this project.', 'li-dev-theme' ) ), 400 );
+		}
+
+		$raw  = isset( $_POST['lidev_link'] ) ? trim( wp_strip_all_tags( wp_unslash( (string) $_POST['lidev_link'] ) ) ) : '';
+		$link = lidev_sanitize_external_url( $raw );
+
+		if ( '' === $link && preg_match( '#^https?://#i', $raw ) ) {
+			$link = $raw;
+		}
+
+		$extra = isset( $_POST['lidev_message'] ) ? lidev_sanitize_email_html( wp_unslash( (string) $_POST['lidev_message'] ) ) : '';
+
+		wp_send_json_success( Lidev_Mail::preview_phase( $project_id, $phase_id, $link, $extra ) );
+	}
+
+	/**
 	 * Save front-end sign-off settings.
 	 *
 	 * @since 1.2.0
@@ -264,16 +302,101 @@ final class Lidev_Team_Actions {
 		self::require_cap( 'lidev_manage_settings' );
 		check_admin_referer( 'lidev_save_settings', 'lidev_nonce' );
 
-		foreach ( array( 'team_email', 'from_email' ) as $key ) {
-			$raw = isset( $_POST[ $key ] ) ? trim( sanitize_text_field( wp_unslash( (string) $_POST[ $key ] ) ) ) : '';
+		$tab = isset( $_POST['lidev_settings_tab'] ) ? sanitize_key( wp_unslash( (string) $_POST['lidev_settings_tab'] ) ) : '';
 
-			if ( '' !== $raw && ! is_email( $raw ) ) {
-				self::fail( Lidev_Routing::settings_url(), __( 'Enter a valid email address.', 'li-dev-theme' ) );
+		if ( ! in_array( $tab, array( 'email', 'reminders', 'messages' ), true ) ) {
+			self::fail( Lidev_Routing::settings_url(), __( 'That settings tab is not available.', 'li-dev-theme' ) );
+		}
+
+		if ( 'email' === $tab ) {
+			foreach ( array( 'team_email', 'from_email' ) as $key ) {
+				$raw = isset( $_POST[ $key ] ) ? trim( sanitize_text_field( wp_unslash( (string) $_POST[ $key ] ) ) ) : '';
+
+				if ( '' !== $raw && ! is_email( $raw ) ) {
+					self::fail( Lidev_Routing::settings_url( 'email' ), __( 'Enter a valid email address.', 'li-dev-theme' ) );
+				}
 			}
 		}
 
 		Lidev_Settings::update( wp_unslash( $_POST ) );
-		self::finish( Lidev_Routing::settings_url(), 'settings' );
+		self::finish( Lidev_Routing::settings_url( $tab ), 'settings' );
+	}
+
+	/**
+	 * Pause or resume reminders for one awaiting phase.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public static function pause_reminders(): void {
+		self::require_cap( 'lidev_send_phases' );
+
+		$project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+		$phase_id   = isset( $_POST['phase_id'] ) ? absint( $_POST['phase_id'] ) : 0;
+
+		check_admin_referer( 'lidev_pause_reminders_' . $phase_id, 'lidev_nonce' );
+		self::require_project( $project_id );
+
+		$phase = Lidev_Phase_Repository::get( $phase_id );
+
+		if ( ! $phase || (int) $phase['project_id'] !== $project_id || 'awaiting' !== (string) $phase['status'] ) {
+			self::fail( Lidev_Routing::project_url( $project_id ), __( 'Reminders cannot be changed for that phase.', 'li-dev-theme' ) );
+		}
+
+		$paused = isset( $_POST['lidev_paused'] ) && '1' === (string) wp_unslash( $_POST['lidev_paused'] );
+
+		if ( ! Lidev_Phase_Repository::set_reminders_paused( $phase_id, $paused ) ) {
+			self::fail( Lidev_Routing::project_url( $project_id ), __( 'Reminders cannot be changed for that phase.', 'li-dev-theme' ) );
+		}
+
+		lidev_log(
+			$paused ? 'reminder_paused' : 'reminder_resumed',
+			$project_id,
+			$phase_id,
+			array( 'type' => (string) $phase['type'] )
+		);
+
+		self::finish( Lidev_Routing::project_url( $project_id ), $paused ? 'reminders_paused' : 'reminders_resumed' );
+	}
+
+	/**
+	 * Move a project into the archive, or bring it back.
+	 *
+	 * @since 1.8.0
+	 * @return void
+	 */
+	public static function archive_project(): void {
+		self::require_cap( 'lidev_manage_projects' );
+
+		$project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+		self::require_project( $project_id );
+		check_admin_referer( 'lidev_archive_project_' . $project_id, 'lidev_nonce' );
+
+		$archived = isset( $_POST['lidev_archive'] ) && '1' === (string) wp_unslash( $_POST['lidev_archive'] );
+		$result   = Lidev_Project::set_archived( $project_id, $archived );
+
+		$fallback = $archived ? home_url( '/' ) : Lidev_Routing::archive_url();
+		$return   = wp_get_referer();
+		$return   = is_string( $return ) ? wp_validate_redirect( $return, $fallback ) : $fallback;
+
+		if ( is_wp_error( $result ) ) {
+			self::fail( $return, $result->get_error_message() );
+		}
+
+		self::finish( $return, $archived ? 'archived' : 'restored' );
+	}
+
+	/**
+	 * Run the reminder check from the settings screen.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public static function run_reminders(): void {
+		self::require_cap( 'lidev_manage_settings' );
+		check_admin_referer( 'lidev_run_reminders', 'lidev_nonce' );
+		lidev_run_reminders();
+		self::finish( Lidev_Routing::settings_url( 'reminders' ), 'reminders_ran' );
 	}
 
 	/**

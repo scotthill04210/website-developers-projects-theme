@@ -114,6 +114,44 @@ final class Lidev_Activity_Repository {
 	}
 
 	/**
+	 * Newest rows, optionally limited to one project and one action.
+	 *
+	 * @since 1.6.0
+	 * @param int    $project_id Project ID, or 0 for every project.
+	 * @param string $action     Action slug, or empty for every action.
+	 * @param int    $limit      Maximum rows.
+	 * @return list<array<string, mixed>>
+	 */
+	public static function search( int $project_id, string $action = '', int $limit = 100 ): array {
+		global $wpdb;
+
+		$limit  = max( 1, min( 500, $limit ) );
+		$action = sanitize_key( $action );
+		$where  = array( '1=1' );
+		$args   = array();
+
+		if ( $project_id > 0 ) {
+			$where[] = 'project_id = %d';
+			$args[]  = $project_id;
+		}
+
+		if ( '' !== $action ) {
+			$where[] = 'action = %s';
+			$args[]  = $action;
+		}
+
+		$args[] = $limit;
+		$sql    = 'SELECT * FROM ' . lidev_table( 'activity' ) . ' WHERE ' . implode( ' AND ', $where ) . ' ORDER BY id DESC LIMIT %d';
+		$rows   = $wpdb->get_results( $wpdb->prepare( $sql, ...$args ), ARRAY_A );
+
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		return array_map( array( self::class, 'hydrate' ), $rows );
+	}
+
+	/**
 	 * Decode the JSON details column.
 	 *
 	 * @since 1.1.0

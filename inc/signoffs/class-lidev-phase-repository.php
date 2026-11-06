@@ -310,4 +310,79 @@ final class Lidev_Phase_Repository {
 
 		return true;
 	}
+
+	/**
+	 * Record one reminder on an awaiting phase that is still open.
+	 *
+	 * @since 1.6.0
+	 * @param int $phase_id Phase row ID.
+	 * @return int New reminder count, or 0 when the phase was not updated.
+	 */
+	public static function mark_reminded( int $phase_id ): int {
+		global $wpdb;
+
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE ' . lidev_table( 'phases' ) . ' SET last_reminder_at = %s, reminder_count = reminder_count + 1 WHERE id = %d AND status = %s AND reminders_paused = 0',
+				current_time( 'mysql' ),
+				$phase_id,
+				'awaiting'
+			)
+		);
+
+		if ( 1 !== (int) $updated ) {
+			return 0;
+		}
+
+		$phase = self::get( $phase_id );
+
+		return $phase ? (int) $phase['reminder_count'] : 0;
+	}
+
+	/**
+	 * Turn reminders on or off for an awaiting phase.
+	 *
+	 * @since 1.6.0
+	 * @param int  $phase_id Phase row ID.
+	 * @param bool $paused   True to stop reminders.
+	 * @return bool
+	 */
+	public static function set_reminders_paused( int $phase_id, bool $paused ): bool {
+		global $wpdb;
+
+		$updated = $wpdb->update(
+			lidev_table( 'phases' ),
+			array( 'reminders_paused' => $paused ? 1 : 0 ),
+			array(
+				'id'     => $phase_id,
+				'status' => 'awaiting',
+			),
+			array( '%d' ),
+			array( '%d', '%s' )
+		);
+
+		return false !== $updated && $updated > 0;
+	}
+
+	/**
+	 * Remember that the one-time unanswered alert was attempted.
+	 *
+	 * @since 1.6.0
+	 * @param int $phase_id Phase row ID.
+	 * @return void
+	 */
+	public static function mark_unanswered_alerted( int $phase_id ): void {
+		global $wpdb;
+
+		$wpdb->update(
+			lidev_table( 'phases' ),
+			array( 'unanswered_alerted' => 1 ),
+			array(
+				'id'     => $phase_id,
+				'status' => 'awaiting',
+			),
+			array( '%d' ),
+			array( '%d', '%s' )
+		);
+	}
 }

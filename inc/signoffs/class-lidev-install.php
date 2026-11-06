@@ -50,6 +50,7 @@ final class Lidev_Install {
 		$phases   = lidev_table( 'phases' );
 		$signoffs = lidev_table( 'signoffs' );
 		$activity = lidev_table( 'activity' );
+		$magic    = lidev_table( 'magic' );
 
 		$sql = "CREATE TABLE {$phases} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -62,6 +63,8 @@ final class Lidev_Install {
 			sent_by bigint(20) unsigned NULL,
 			last_reminder_at datetime NULL,
 			reminder_count int(10) unsigned NOT NULL DEFAULT 0,
+			reminders_paused tinyint(1) NOT NULL DEFAULT 0,
+			unanswered_alerted tinyint(1) NOT NULL DEFAULT 0,
 			signed_at datetime NULL,
 			signoff_id bigint(20) unsigned NULL,
 			PRIMARY KEY  (id),
@@ -81,6 +84,7 @@ final class Lidev_Install {
 			ip_address varchar(45) NOT NULL DEFAULT '',
 			user_agent varchar(255) NOT NULL DEFAULT '',
 			signed_at datetime NOT NULL,
+			snapshot longtext NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY phase_id_unique (phase_id),
 			KEY project_id (project_id)
@@ -98,9 +102,23 @@ final class Lidev_Install {
 			PRIMARY KEY  (id),
 			KEY project_id (project_id),
 			KEY created_at (created_at)
+		) {$charset};
+		CREATE TABLE {$magic} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			user_id bigint(20) unsigned NOT NULL,
+			token_hash char(64) NOT NULL,
+			phase_id bigint(20) unsigned NULL,
+			created_at datetime NOT NULL,
+			expires_at datetime NOT NULL,
+			last_used_at datetime NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY token_hash (token_hash),
+			KEY user_id (user_id),
+			KEY expires_at (expires_at)
 		) {$charset};";
 
 		dbDelta( $sql );
+		Lidev_Signoff::backfill_snapshots();
 		Lidev_Roles::sync();
 		update_option( 'lidev_schema_version', LIDEV_SCHEMA_VERSION, true );
 		flush_rewrite_rules( false );

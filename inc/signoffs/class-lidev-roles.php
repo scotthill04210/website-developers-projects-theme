@@ -111,6 +111,31 @@ final class Lidev_Roles {
 	}
 
 	/**
+	 * Team and Client accounts do not use the REST API.
+	 *
+	 * Logged-out requests are left for the privacy redirect. Administrators pass through.
+	 *
+	 * @since 1.7.0
+	 * @param mixed           $result  Response from an earlier callback.
+	 * @param WP_REST_Server  $server  Server instance.
+	 * @param WP_REST_Request $request Request.
+	 * @return mixed
+	 */
+	public static function block_rest( $result, $server, $request ) {
+		unset( $server, $request );
+
+		if ( $result instanceof WP_Error || ! self::is_locked_from_admin() ) {
+			return $result;
+		}
+
+		return new WP_Error(
+			'lidev_rest_forbidden',
+			__( 'You cannot do that.', 'li-dev-theme' ),
+			array( 'status' => 403 )
+		);
+	}
+
+	/**
 	 * Team and Client accounts use the front end. Administrators do not.
 	 *
 	 * @since 1.2.0

@@ -40,6 +40,17 @@
 	gap: 0.35rem 1rem;
 }
 
+.lidev-nav-dashboard > a {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.lidev-nav-dashboard__icon {
+	flex: 0 0 auto;
+	display: block;
+}
+
 .lidev-nav-desktop .lidev-nav-menu a {
 	color: #d8d8d8;
 	font-size: 0.875rem;
@@ -274,6 +285,10 @@ body.lidev-nav-open .lidev-nav-drawer {
 	gap: 0.15rem;
 }
 
+.lidev-nav-drawer .lidev-nav-dashboard > a {
+	display: flex;
+}
+
 .lidev-nav-drawer .lidev-nav-menu a {
 	display: block;
 	padding: 0.85rem 1rem;
@@ -327,6 +342,37 @@ body.lidev-nav-open .lidev-nav-drawer .lidev-nav-menu > li:nth-child(8) { animat
 		opacity: 1;
 		transform: translateX(0);
 	}
+}
+
+.lidev-nav-docs > a {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.lidev-nav-docs__icon {
+	flex: 0 0 auto;
+	display: block;
+}
+
+.lidev-nav-drawer .lidev-nav-docs > a {
+	display: flex;
+}
+
+.lidev-footer__archive {
+	margin: -0.35rem 0 0;
+	font-size: 0.65rem;
+	line-height: 1;
+}
+
+.lidev-footer__archive a {
+	color: var(--lidev-sweet-grey);
+	text-decoration: none;
+}
+
+.lidev-footer__archive a:hover,
+.lidev-footer__archive a:focus-visible {
+	color: var(--lidev-pure-canvas);
 }
 
 body.lidev-nav-open {

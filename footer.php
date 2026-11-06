@@ -29,6 +29,11 @@ $lidev_footer_icon = lidev_asset_uri( 'assets/images/LI_Icon_Cultured.png' );
 			&copy; <?php echo esc_html( gmdate( 'Y' ) ); ?>
 			<?php bloginfo( 'name' ); ?>
 		</p>
+		<?php if ( is_user_logged_in() && current_user_can( 'lidev_view_all_projects' ) && ! lidev_user_is_client_only() ) : ?>
+			<p class="lidev-footer__archive">
+				<a href="<?php echo esc_url( Lidev_Routing::archive_url() ); ?>"><?php esc_html_e( 'Archive', 'li-dev-theme' ); ?></a>
+			</p>
+		<?php endif; ?>
 	</div>
 </footer>
 

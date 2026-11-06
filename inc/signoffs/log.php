@@ -38,10 +38,43 @@ function lidev_log( string $action, int $project_id = 0, ?int $phase_id = null, 
 			'action'        => $action,
 			'project_id'    => $project_id,
 			'phase_id'      => $phase_id,
-			'details'       => $details,
+			'details'       => lidev_redact_log_details( $details ),
 			'ip_address'    => lidev_request_ip(),
 		)
 	);
 
 	return is_wp_error( $result ) ? 0 : $result;
+}
+
+/**
+ * Remove magic-link tokens from anything about to be stored in the activity log.
+ *
+ * @since 1.7.0
+ * @param array<string, mixed> $details Extra JSON details.
+ * @return array<string, mixed>
+ */
+function lidev_redact_log_details( array $details ): array {
+	$clean = array();
+
+	foreach ( $details as $key => $value ) {
+		if ( is_array( $value ) ) {
+			$clean[ $key ] = lidev_redact_log_details( $value );
+			continue;
+		}
+
+		if ( ! is_string( $value ) ) {
+			$clean[ $key ] = $value;
+			continue;
+		}
+
+		if ( 'token' === $key ) {
+			$clean[ $key ] = '[redacted]';
+			continue;
+		}
+
+		$replaced      = preg_replace( '/token=[A-Za-z0-9]+/i', 'token=[redacted]', $value );
+		$clean[ $key ] = is_string( $replaced ) ? $replaced : $value;
+	}
+
+	return $clean;
 }
